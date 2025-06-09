@@ -8,14 +8,15 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/User-Authenication-App-Vue/',  // <--- Add this line
   plugins: [
     vue(),
     VitePWA({
-        registerType: 'autoUpdate',
-        devOptions: {
-          enabled: true
-        }
-      })
+      registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true
+      }
+    })
   ],
   resolve: {
     alias: {
@@ -23,3 +24,4 @@ export default defineConfig({
     },
   },
 });
+
