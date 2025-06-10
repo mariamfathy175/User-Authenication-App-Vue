@@ -8,13 +8,15 @@ import "@/assets/main.css";
 const userStore = useUserStore();
 const username = ref("");
 const password = ref("");
-const dbRef = ref(null);
 
 const usernameError = ref(false);
 const passwordError = ref(false);
 const loginError = ref(false);
 const errorMsg = ref("");
 const router = useRouter();
+
+const isSyncing = ref(true);
+const syncMessage = ref("Syncing user data, please wait.");
 
 function validateForm() {
   usernameError.value = !username.value.trim();
@@ -31,17 +33,23 @@ function validateForm() {
   return true;
 }
 
+async function syncModal() {
+  try {
+    isSyncing.value = true;
+    syncMessage.value = "Syncing user data, please wait.";
+    await userStore.syncData();
+    syncMessage.value = "Sync complete Succesfully.";
+  } catch (err) {
+    syncMessage.value = "Sync failed, Please try again later.";
+    isSyncing.value = false;
+  } finally {
+    setTimeout(() => (isSyncing.value = false), 1000);
+  }
+}
+
 onMounted(async () => {
   await userStore.initDB();
-  await userStore.syncData();
-});
-
-window.addEventListener("online", async () => {
-  await userStore.syncData();
-});
-
-window.addEventListener("offline", () => {
-  console.log("You are offline.");
+  await syncModal();
 });
 
 async function login() {
@@ -65,12 +73,20 @@ async function login() {
 
 setInterval(async function () {
   if (navigator.onLine) {
-    await userStore.syncData();
+    await syncModal();
     console.error("syncing data");
   } else {
     console.error("user is offline");
   }
 }, 60 * 1000);
+
+window.addEventListener("online", async () => {
+  await syncModal();
+});
+
+window.addEventListener("offline", () => {
+  console.log("You are offline.");
+});
 </script>
 
 <template>
@@ -105,6 +121,13 @@ setInterval(async function () {
         </p>
         <button type="submit">Login</button>
       </form>
+    </div>
+
+    <div v-if="isSyncing" class="modal-overlay">
+      <div>
+        <p>{{ syncMessage }}</p>
+        <div class="spinner"></div>
+      </div>
     </div>
   </div>
 </template>

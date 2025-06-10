@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import { compare } from "bcryptjs";
+import { loginOnline, loginOffline } from "@/services/authService";
 import { decryptData } from "@/utils/decryptionAlgorithm";
 import { userAdapter } from "@/utils/userAdapter";
 
@@ -47,7 +47,7 @@ export const useUserStore = defineStore("user", () => {
         break;
       }
     }
-    
+
     const tx = db.value.transaction(storeName, "readwrite");
     const store = tx.objectStore(storeName);
 
@@ -94,55 +94,13 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  async function checkUser(username, password) {
-    const tx = db.value.transaction(storeName, "readwrite");
-    const store = tx.objectStore(storeName);
-    const index = store.index("username");
-    const res = index.get(username);
-    res.onsuccess = async function () {
-      if (res.result) {
-        console.error(res.result);
-        const match = await compare(password, res.result.password);
-        if (match) {
-          return { success: true };
-        } else {
-          return { success: false };
-        }
-      } else {
-        return { success: false };
-      }
-    };
-    res.onerror = function () {
-      console.error("Error Connecting to IndexedDB");
-    };
-  }
-
   async function login(username, password) {
     if (navigator.onLine) {
-      try {
-        const response = await fetch(
-          "https://calls.trolley.systems/api/login",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              username: username,
-              password: password,
-            }),
-          }
-        );
-
-        const loginResponse = await response.json();
-        return loginResponse;
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
+      return await loginOnline(username, password);
     } else {
-      return checkUser(username, password);
+      return await loginOffline(db.value, storeName, username, password);
     }
   }
 
-  return { initDB, getUserData, login, syncData };
+  return { initDB, getUserData, getSyncData, login, syncData };
 });
